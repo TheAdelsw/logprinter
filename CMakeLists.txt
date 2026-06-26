@@ -10,13 +10,13 @@ add_executable(logprinter
     src/LogPrinter/core/LogPrinter.cpp
 )
 
-add_executable(viewertest
+add_executable(client
+    src/client.cpp
     src/Viewer/core/Viewer.cpp
-
 )
 
 target_include_directories(logprinter PRIVATE include)
-target_include_directories(viewertest PRIVATE include)
+target_include_directories(client PRIVATE include)
 
 
 
@@ -32,8 +32,14 @@ if(OpenCV_FOUND)
     target_compile_definitions(logprinter PUBLIC LOGPRINTER_HAS_OPENCV)
     target_include_directories(logprinter PRIVATE ${OpenCV_INCLUDE_DIRS})
     target_link_libraries(logprinter PRIVATE ${OpenCV_LIBS})
-    message(STATUS "[logprinter] OpenCV found: ${OpenCV_VERSION}")
+
+    target_compile_definitions(client PUBLIC VIEWERTEST_HAS_OPENCV)
+    target_include_directories(client PRIVATE ${OpenCV_INCLUDE_DIRS})
+    target_link_libraries(client PRIVATE ${OpenCV_LIBS})
+    
+
+    message(STATUS "OpenCV found: ${OpenCV_VERSION}")
 else()
-    message(STATUS "[logprinter] OpenCV NOT found — image features disabled")
+    message(STATUS "OpenCV NOT found — image features disabled")
 endif()
 

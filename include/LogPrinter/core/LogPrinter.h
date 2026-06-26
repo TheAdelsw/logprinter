@@ -18,10 +18,8 @@
 #include <opencv2/opencv.hpp>
 
 
-
-
 //发送协议 暂定
-//[数据类型][数据长度][原始数据]
+//[数据类型][分类长度][分类名][数据长度][原始数据]
 
 
 
@@ -52,12 +50,16 @@ public:
     //图片消息
     LogPrinter& operator<<(const cv::Mat& mat);
 
+    void SetMsgType(const std::string& str);
+
 
 private:
 
     int listen_fd;
     int client_fd;
-    uint16_t port;
+
+
+    std::string current_category = "Default";
 
 
 };

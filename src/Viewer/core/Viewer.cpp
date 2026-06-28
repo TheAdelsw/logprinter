@@ -163,6 +163,8 @@ void Viewer::DisplayLoop()
     {
         static uint64_t first_time = this->TimeCounter_ms();
 
+        std::this_thread::sleep_for(std::chrono::milliseconds(2));
+
         uint64_t last_time = this->TimeCounter_ms();
         this->display_waittime_cnt += last_time - first_time;
         //printf("此时cnt %lu\n",this->display_waittime_cnt);
@@ -255,7 +257,6 @@ void Viewer::IndexShift_L()
 {
     int v = this->all_categories.size();
     this->index_category = (this->index_category + v -1) % v;
-    this->filter = this->all_categories[this->index_category];
     system_clear();
     this->index_history = 0;
     this->show_pause = false;
@@ -287,10 +288,6 @@ void Viewer::IntervalUP()
     this->display_interval += 100;
 }
 
-void Viewer::SetFilter(const std::string& str)
-{
-    this->filter = str;
-}
 
 
 //utils

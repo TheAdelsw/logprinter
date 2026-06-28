@@ -70,10 +70,6 @@ public:
     void Show_A_Log();
     void IndexShift_L();
     void IndexShift_R();
-    void SetFilter(const std::string& str);
-
-
-    std::set<std::string> getset();
 
 //utils 
 private:
@@ -100,12 +96,10 @@ private:
 
 
 
-    std::string filter = "";     //当前筛选分类 ""=全部
 
 
     
     //监听消息的线程
-    std::mutex recv_mtx;
     std::thread recv_thread;
     void ReceiveLoop();
     
@@ -118,7 +112,6 @@ private:
     //消息播放线程
     std::thread display_thread;
     bool display_running = true;
-    double display_speed = 1.0;
     uint64_t display_waittime_cnt = 0;
     uint64_t display_interval = 200;//200ms
     void DisplayLoop();

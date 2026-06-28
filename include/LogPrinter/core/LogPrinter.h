@@ -66,6 +66,7 @@ private:
 
     int listen_fd;
     int client_fd;
+    bool fd_released = false;
     bool send_running = true;//接收端结束不重复连接 避免中途阻塞
     //recv和send在异常时返回-1 若忽视异常继续使用 send会杀死程序
 

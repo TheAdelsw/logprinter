@@ -45,15 +45,19 @@ LogPrinter::LogPrinter(uint16_t port)
 
 LogPrinter::~LogPrinter()
 {
+    if(this->fd_released)return;
     close(this->listen_fd);
     close(this->client_fd);
+    this->fd_released = true;
     //printf("断开连接\n");
 }
 
 bool LogPrinter::StopServer()
 {
+    if(this->fd_released)return true;
     close(this->listen_fd);
     close(this->client_fd);
+    this->fd_released = true;
     return true;
 }
 

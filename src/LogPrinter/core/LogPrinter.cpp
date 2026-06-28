@@ -64,12 +64,12 @@ bool LogPrinter::StopServer()
 
 
 
-LogPrinter& LogPrinter::operator<<(const std::string& str)
+
+bool LogPrinter::send_Text(const std::string& tag, const std::string& str)
 {
     if(!this->send_running)
     {
-        printf("日志类连接错误,文本发送失败\n");
-        return *this;
+        return false;
     }
     //标记
     uint8_t type = static_cast<uint8_t>(LogType::TEXT_UTF8);
@@ -78,7 +78,7 @@ LogPrinter& LogPrinter::operator<<(const std::string& str)
     //转换为1字节读入buf
     uint8_t* p_timestamp = reinterpret_cast<uint8_t*>(&timestamp);
     //分类长度
-    uint8_t category_len = this->current_category.size();
+    uint8_t category_len = tag.size();
     //数据长度
     uint32_t data_len = htonl(str.size());//htonl将字节序转为网络字节序 对于不同架构的统一
     //转换读入给buf
@@ -97,7 +97,7 @@ LogPrinter& LogPrinter::operator<<(const std::string& str)
     buf.push_back(type);
     buf.insert(buf.end(), p_timestamp, p_timestamp + 8);
     buf.push_back(category_len);
-    buf.insert(buf.end(), this->current_category.begin(), this->current_category.end());
+    buf.insert(buf.end(), tag.begin(), tag.end());
     buf.insert(buf.end(), p_data_len, p_data_len + 4);//左闭右开
     buf.insert(buf.end(), str.begin(), str.end());
     
@@ -105,10 +105,79 @@ LogPrinter& LogPrinter::operator<<(const std::string& str)
     if(send(this->client_fd, buf.data(), buf.size(), MSG_NOSIGNAL) == -1)
     {
         this->send_running = false;
+        printf("日志类连接错误,文本发送失败\n");
+        return false;
+    }
+    
+    return true;//链式调用 返回自身实例
+}
+
+
+//图片发送的重载
+bool LogPrinter::send_Img(const std::string& tag,const cv::Mat& mat)
+{
+
+    if(!this->send_running)
+    {
+        return false;
     }
 
-    return *this;//链式调用 返回自身实例
+    //图片消息仍然按照元数据协议
+    //其中data数据 按照[rows:4B][cols:4B][cvType:4B][raw pixelx:N]格式发送
+    
+    uint8_t type = static_cast<uint8_t>(LogType::IMAGE_RAW);
+
+    uint64_t timestamp = LogPrinter::htonl_64(LogPrinter::TimeCounter());
+    uint8_t* p_timestamp = reinterpret_cast<uint8_t*>(&timestamp);
+
+    uint8_t category_len = tag.size();
+
+    //data内容
+    uint32_t rows = htonl(mat.rows);
+    uint32_t cols = htonl(mat.cols);
+    uint32_t cvtype = htonl(mat.type());
+    //total返回像素数 elemSize返回每个像素占用的字节数
+    size_t pixel_bytes = mat.total() * mat.elemSize();
+    uint32_t data_len = htonl(12 + pixel_bytes);
+    uint8_t* p_data_len = reinterpret_cast<uint8_t*>(&data_len);
+    uint8_t* p_rows = reinterpret_cast<uint8_t*>(&rows);
+    uint8_t* p_cols = reinterpret_cast<uint8_t*>(&cols);
+    uint8_t* p_cvtype = reinterpret_cast<uint8_t*>(&cvtype);
+
+    std::vector<uint8_t> buf;
+    buf.push_back(type);
+    buf.insert(buf.end(), p_timestamp, p_timestamp + 8);
+    buf.push_back(category_len);
+    buf.insert(buf.end(), tag.begin(), tag.end());
+    buf.insert(buf.end(), p_data_len, p_data_len + 4);
+    buf.insert(buf.end(), p_rows, p_rows + 4);
+    buf.insert(buf.end(), p_cols, p_cols + 4);
+    buf.insert(buf.end(), p_cvtype, p_cvtype + 4);
+    buf.insert(buf.end(), mat.data, mat.data + pixel_bytes);
+    
+    if(send(this->client_fd, buf.data(), buf.size(), MSG_NOSIGNAL) == -1)
+    {
+        this->send_running = false;
+        printf("日志类连接错误,图片发送失败\n");
+        return false;
+    }
+
+    return true;
 }
+
+LogPrinter& LogPrinter::operator<<(const std::string& str)
+{
+    this->send_Text(this->current_category, str);
+    return *this;
+}
+
+LogPrinter& LogPrinter::operator<<(const cv::Mat& mat)
+{
+    this->send_Img(this->current_category, mat);
+    return *this;
+}
+
+
 
 LogPrinter& LogPrinter::operator<<(const int& val)
 {
@@ -133,56 +202,6 @@ LogPrinter& LogPrinter::operator<<(const double& val)
     return *this;
 }
 
-//图片发送的重载
-LogPrinter& LogPrinter::operator<<(const cv::Mat& mat)
-{
-
-    if(!this->send_running)
-    {
-        printf("日志类连接错误,图片发送失败\n");
-        return *this;
-    }
-
-    //图片消息仍然按照元数据协议
-    //其中data数据 按照[rows:4B][cols:4B][cvType:4B][raw pixelx:N]格式发送
-    
-    uint8_t type = static_cast<uint8_t>(LogType::IMAGE_RAW);
-
-    uint64_t timestamp = LogPrinter::htonl_64(LogPrinter::TimeCounter());
-    uint8_t* p_timestamp = reinterpret_cast<uint8_t*>(&timestamp);
-
-    uint8_t category_len = this->current_category.size();
-
-    //data内容
-    uint32_t rows = htonl(mat.rows);
-    uint32_t cols = htonl(mat.cols);
-    uint32_t cvtype = htonl(mat.type());
-    //total返回像素数 elemSize返回每个像素占用的字节数
-    size_t pixel_bytes = mat.total() * mat.elemSize();
-    uint32_t data_len = htonl(12 + pixel_bytes);
-    uint8_t* p_data_len = reinterpret_cast<uint8_t*>(&data_len);
-    uint8_t* p_rows = reinterpret_cast<uint8_t*>(&rows);
-    uint8_t* p_cols = reinterpret_cast<uint8_t*>(&cols);
-    uint8_t* p_cvtype = reinterpret_cast<uint8_t*>(&cvtype);
-
-    std::vector<uint8_t> buf;
-    buf.push_back(type);
-    buf.insert(buf.end(), p_timestamp, p_timestamp + 8);
-    buf.push_back(category_len);
-    buf.insert(buf.end(), this->current_category.begin(), this->current_category.end());
-    buf.insert(buf.end(), p_data_len, p_data_len + 4);
-    buf.insert(buf.end(), p_rows, p_rows + 4);
-    buf.insert(buf.end(), p_cols, p_cols + 4);
-    buf.insert(buf.end(), p_cvtype, p_cvtype + 4);
-    buf.insert(buf.end(), mat.data, mat.data + pixel_bytes);
-    
-    if(send(this->client_fd, buf.data(), buf.size(), MSG_NOSIGNAL) == -1)
-    {
-        this->send_running = false;
-    }
-
-    return *this;
-}
 
 
 void LogPrinter::SetMsgType(const std::string& str)
@@ -211,4 +230,71 @@ uint64_t LogPrinter::htonl_64(uint64_t val)
         return __builtin_bswap64(val);
     }
     return val;
+}
+
+
+
+
+//TaggedStream结构体
+LogPrinter::TaggedStream LogPrinter::operator()(const std::string& tag)
+{
+    return TaggedStream{*this, tag, LogStreamEntry{}};
+}
+
+LogPrinter::TaggedStream::~TaggedStream()
+{
+    if(!this->msg.buf_text.empty())
+    {
+        std::string buffer = "";
+        for(auto& it : this->msg.buf_text)
+        {
+            buffer += it;
+        }
+        this->log.send_Text(this->tag, buffer);
+    }
+    
+    if(!this->msg.buf_img.empty())
+    {
+        for(auto& it : this->msg.buf_img)
+        {
+            this->log.send_Img(this->tag, it);
+        }
+
+    }
+}
+
+LogPrinter::TaggedStream& LogPrinter::TaggedStream::operator<<(const std::string& str)
+{
+    this->msg.buf_text.push_back(str);
+    return *this;
+}
+
+LogPrinter::TaggedStream& LogPrinter::TaggedStream::operator<<(const cv::Mat& mat)
+{
+    this->msg.buf_img.push_back(mat);
+    return *this;
+}
+
+LogPrinter::TaggedStream& LogPrinter::TaggedStream::operator<<(const int& val)
+{
+    std::ostringstream oss;
+    oss << val;
+    this->msg.buf_text.push_back(oss.str());
+    return *this;
+}
+
+LogPrinter::TaggedStream& LogPrinter::TaggedStream::operator<<(const float& val)
+{
+    std::ostringstream oss;
+    oss << val;
+    this->msg.buf_text.push_back(oss.str());
+    return *this;
+}
+
+LogPrinter::TaggedStream& LogPrinter::TaggedStream::operator<<(const double& val)
+{
+    std::ostringstream oss;
+    oss << val;
+    this->msg.buf_text.push_back(oss.str());
+    return *this;
 }

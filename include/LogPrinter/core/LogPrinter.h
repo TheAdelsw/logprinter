@@ -5,6 +5,7 @@
 
 //标准库
 #include <iostream>
+#include <vector>
 #include <cstdint>
 #include <chrono>
 
@@ -35,6 +36,11 @@ enum class LogType : uint8_t
     IMAGE_RAW = 0x02,
 };
 
+struct LogStreamEntry
+{
+    std::vector<std::string> buf_text;
+    std::vector<cv::Mat> buf_img;
+};
 
 class LogPrinter
 {
@@ -54,8 +60,11 @@ public:
     //图片消息 发送原始图片数据
     LogPrinter& operator<<(const cv::Mat& mat);
 
+    //建议只在单线程使用手动设置标签的方法 多线程会出错
     void SetMsgType(const std::string& str);
 
+    
+    
 //utils
 private:
     uint64_t TimeCounter();
@@ -72,6 +81,34 @@ private:
 
 
     std::string current_category = "Default";
+
+    bool send_Text(const std::string& tag, const std::string& str);
+    bool send_Img(const std::string& tag, const cv::Mat& mat);
+    
+
+private:
+    //解决多线程标签发送问题的结构体
+    struct TaggedStream
+    {
+        LogPrinter& log;
+        std::string tag;
+        LogStreamEntry msg;
+        
+        //析构函数临时对象(无名 由函数返回的值)在完整表达式结束后析构;
+        ~TaggedStream();
+
+
+        TaggedStream& operator<<(const std::string& str);
+        TaggedStream& operator<<(const int& val);
+        TaggedStream& operator<<(const float& val);
+        TaggedStream& operator<<(const double& val);
+        TaggedStream& operator<<(const cv::Mat& mat);
+
+    };
+
+
+public:
+    TaggedStream operator()(const std::string& tag);
 
 
 };

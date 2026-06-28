@@ -5,7 +5,7 @@
 int main()
 {
     LogPrinter log(8888);
-    log<<"草泥马";
+    //log<<"草泥马";
     int x = 88;
     /* while(true)
     {
@@ -23,34 +23,41 @@ int main()
     cv::Mat img8 = cv::imread("test/000008.jpg");
     cv::Mat img9 = cv::imread("test/000009.jpg");
     
-    log.SetMsgType("哈哈哈");
-    log<<"测试成功";
+    // log.SetMsgType("哈哈哈");
+    // log<<"测试成功";
+    // log.SetMsgType("图类");
+    // log<<"图片发送完成";
+    log("哈哈哈")<<"测试成功"<<x;
 
-    log.SetMsgType("图类");
-    log<<"图片发送完成";
+    // log("图类")<<"图片发送完成";
+    log("default")<<"all";
     
-    log<<img1;
-    log<<img2;
-    log<<img3;
-    log<<img4;
-    log<<img5;
-    log<<img6;
-    log<<img7;
-    log<<img8;
-    log<<img9;
+    // log<<img1;
+    // log<<img2;
+
+    log("图类")<<img1;
+    log("图类")<<img2;
+    log("图类")<<img3;
+    log("图类")<<img4;
+    log("图类")<<img5;
+    log("图类")<<img6;
+    log("图类")<<img7;
+    log("图类")<<img8;
+    log("图类")<<img9;
     
     int i1 = 1;
     int i2 = 1;
     int i3 = 1;
+    printf("运行到这里了\n");
     while(1)
     {
         //log<<"测试:"<<i<<"\n";
-        log.SetMsgType("哈哈哈");
-        log<<"此时为:"<<i1;
-        log.SetMsgType("图类");
-        log<<"此时为..."<<i2;
-        log.SetMsgType("异类");
-        log<<"Now:"<<i3;
+        //log.SetMsgType("哈哈哈");
+        log("哈哈哈")<<"此时为:"<<i1;
+        //log.SetMsgType("图类");
+        log("图类")<<"此时为..."<<i2;
+        //log.SetMsgType("异类");
+        log("异类")<<"Now:"<<i3;
         //log<<img;
         i1+=1;
         i2+=2;

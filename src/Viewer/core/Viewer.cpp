@@ -20,6 +20,7 @@ Viewer::Viewer(const std::string ServerIP, const uint16_t ServerPort)
 
     //set容器初始化
     this->categories.insert("");
+    this->all_categories.assign(this->categories.begin(), this->categories.end());
 
 }
 
@@ -167,11 +168,14 @@ void Viewer::DisplayLoop()
 
         uint64_t last_time = this->TimeCounter_ms();
         this->display_waittime_cnt += last_time - first_time;
-        //printf("此时cnt %lu\n",this->display_waittime_cnt);
+
+        
+
         first_time = last_time;
 
         if(this->display_waittime_cnt >= this->display_interval && !this->show_pause)
         {
+            
             this->display_waittime_cnt = 0;
 
             std::string select = this->all_categories[this->index_category];
@@ -184,7 +188,10 @@ void Viewer::DisplayLoop()
 
             //printf("触发输出\n");
             this->Show_A_Log();
-            this->index_history++;
+            if(this->index_history < total)
+            {
+                this->index_history++;
+            }
 
             while(select != ""&& this->index_history < total && this->history[this->index_history].category != select)
             {
@@ -359,4 +366,5 @@ uint64_t Viewer::TimeCounter_ms()
 void Viewer::system_clear()
 {
     printf("\033[2J\033[H");
+    fflush(stdout);
 }

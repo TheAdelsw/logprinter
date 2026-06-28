@@ -73,11 +73,11 @@ bool Viewer::Hear()
     {
         case 0x01:
             index = this->history_text.size();
-            this->history_text.push_back({data});
+            this->history_text.push_back(Entry_Text {data} );
             break;
         case 0x02:
             index = this->history_img.size();
-            this->history_img.push_back(imgdata_decoder(data));
+            this->history_img.push_back(Entry_Img { imgdata_decoder(data) });
             break;
     }
 
@@ -99,23 +99,6 @@ bool Viewer::Hear()
     }
     
 
-    // if(type == 0x01)
-    // {    
-    //     if(msg.category == this->all_categories[this->index_category] || this->all_categories[this->index_category] == "")
-    //     {
-    //         printf("[%s][%s]%s\n",timestamp_decoder(msg.timestamp).c_str(),msg.category.c_str(),msg.data.c_str());
-    //     }
-    // }
-    // if(type == 0x02)
-    // {
-    //     if(msg.category == this->all_categories[this->index_category] || this->all_categories[this->index_category] == "")
-    //     {
-
-    //         cv::imshow("LogPrinter", this->history_img[msg.index]);
-    //         cv::waitKey(10);
-
-    //     }
-    // }
 
 
 
@@ -158,6 +141,7 @@ void Viewer::InputLoop()
         
 
         if(cmd == 'q')this->input_running = false;
+        if(cmd == ' ')this->show_pause = !this->show_pause;
         if(cmd == 'r')this->Display_Reset();
         if(cmd == 'a')this->IndexShift_L();
         if(cmd == 'd')this->IndexShift_R();
@@ -184,7 +168,7 @@ void Viewer::DisplayLoop()
         //printf("此时cnt %lu\n",this->display_waittime_cnt);
         first_time = last_time;
 
-        if(this->display_waittime_cnt >= this->display_interval)
+        if(this->display_waittime_cnt >= this->display_interval && !this->show_pause)
         {
             this->display_waittime_cnt = 0;
 
@@ -218,7 +202,7 @@ void Viewer::DisplayLoop()
 
 
 
-void Viewer::ShowByCategory()
+void Viewer::ShowAll()
 {
     std::string select = this->all_categories[this->index_category]; 
     for(auto msg : this->history)
@@ -227,7 +211,7 @@ void Viewer::ShowByCategory()
         {
             if(select == "" || msg.category == select)
             {
-                printf("[%s][%s]%s\n",timestamp_decoder(msg.timestamp).c_str(),msg.category.c_str(),this->history_text[msg.index].c_str());
+                printf("[%s][%s]%s\n",timestamp_decoder(msg.timestamp).c_str(),msg.category.c_str(),this->history_text[msg.index].text.c_str());
             }
         }
         if( msg.type == 0x02)
@@ -235,7 +219,7 @@ void Viewer::ShowByCategory()
             if(select == "" || msg.category == select)
             {
 
-                cv::imshow("LogPrinter", this->history_img[msg.index]);
+                cv::imshow("LogPrinter", this->history_img[msg.index].img);
                 cv::waitKey(10);
 
             }
@@ -253,11 +237,11 @@ void Viewer::Show_A_Log()
     switch(now_msg.type)
     {
         case 0x01:
-        printf("[%s][%s]%s\n",timestamp_decoder(now_msg.timestamp).c_str(),now_msg.category.c_str(),this->history_text[now_msg.index].c_str());
+        printf("[%s][%s]%s\n",timestamp_decoder(now_msg.timestamp).c_str(),now_msg.category.c_str(),this->history_text[now_msg.index].text.c_str());
         break;
 
         case 0x02:
-        cv::imshow("LogPrinter", this->history_img[now_msg.index]);
+        cv::imshow("LogPrinter", this->history_img[now_msg.index].img);
         cv::waitKey(1);
         break;
     }
@@ -274,6 +258,7 @@ void Viewer::IndexShift_L()
     this->filter = this->all_categories[this->index_category];
     system_clear();
     this->index_history = 0;
+    this->show_pause = false;
 }
 
 void Viewer::IndexShift_R()
@@ -282,12 +267,14 @@ void Viewer::IndexShift_R()
     this->index_category = (this->index_category + v +1) % v;
     system_clear();
     this->index_history = 0;
+    this->show_pause = false;
 }
 
 void Viewer::Display_Reset()
 {
     system_clear();
     this->index_history = 0;
+    this->show_pause = false;
 }
 
 void Viewer::IntervalDOWN()
@@ -374,5 +361,5 @@ uint64_t Viewer::TimeCounter_ms()
 
 void Viewer::system_clear()
 {
-    system("clear");
+    printf("\033[2J\033[H");
 }

@@ -27,6 +27,8 @@
 //客户端解算
 
 
+//消息暂定两大类 文本消息全部使用std::string字符串 图片消息使用cv::Mat
+
 enum class LogType : uint8_t
 {
     TEXT_UTF8 = 0x01,
@@ -64,6 +66,8 @@ private:
 
     int listen_fd;
     int client_fd;
+    bool send_running = true;//接收端结束不重复连接 避免中途阻塞
+    //recv和send在异常时返回-1 若忽视异常继续使用 send会杀死程序
 
 
     std::string current_category = "Default";

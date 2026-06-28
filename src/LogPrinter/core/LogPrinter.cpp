@@ -47,6 +47,7 @@ LogPrinter::~LogPrinter()
 {
     close(this->listen_fd);
     close(this->client_fd);
+    //printf("断开连接\n");
 }
 
 bool LogPrinter::StopServer()
@@ -61,6 +62,11 @@ bool LogPrinter::StopServer()
 
 LogPrinter& LogPrinter::operator<<(const std::string& str)
 {
+    if(!this->send_running)
+    {
+        printf("日志类连接错误,文本发送失败\n");
+        return *this;
+    }
     //标记
     uint8_t type = static_cast<uint8_t>(LogType::TEXT_UTF8);
     //时间戳
@@ -91,7 +97,11 @@ LogPrinter& LogPrinter::operator<<(const std::string& str)
     buf.insert(buf.end(), p_data_len, p_data_len + 4);//左闭右开
     buf.insert(buf.end(), str.begin(), str.end());
     
-    send(this->client_fd, buf.data(), buf.size(), 0);
+    //send的第四个参数 用来处理发送的动作 MSG_NOSIGNAL使得发送失败不杀死进程 返回-1
+    if(send(this->client_fd, buf.data(), buf.size(), MSG_NOSIGNAL) == -1)
+    {
+        this->send_running = false;
+    }
 
     return *this;//链式调用 返回自身实例
 }
@@ -122,6 +132,13 @@ LogPrinter& LogPrinter::operator<<(const double& val)
 //图片发送的重载
 LogPrinter& LogPrinter::operator<<(const cv::Mat& mat)
 {
+
+    if(!this->send_running)
+    {
+        printf("日志类连接错误,图片发送失败\n");
+        return *this;
+    }
+
     //图片消息仍然按照元数据协议
     //其中data数据 按照[rows:4B][cols:4B][cvType:4B][raw pixelx:N]格式发送
     
@@ -155,7 +172,10 @@ LogPrinter& LogPrinter::operator<<(const cv::Mat& mat)
     buf.insert(buf.end(), p_cvtype, p_cvtype + 4);
     buf.insert(buf.end(), mat.data, mat.data + pixel_bytes);
     
-    send(this->client_fd, buf.data(), buf.size(), 0);
+    if(send(this->client_fd, buf.data(), buf.size(), MSG_NOSIGNAL) == -1)
+    {
+        this->send_running = false;
+    }
 
     return *this;
 }

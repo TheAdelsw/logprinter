@@ -66,7 +66,7 @@ public:
     void StartThread();
     bool Hear();
 
-    void ShowByCategory();
+    void ShowAll();
     void Show_A_Log();
     void IndexShift_L();
     void IndexShift_R();
@@ -95,8 +95,8 @@ private:
     std::vector<LogEntry> history;//所有元数据信息 扩容时旧迭代器失效
     size_t index_history = 0;
     
-    std::vector<std::string> history_text;//所有文本数据
-    std::vector<cv::Mat> history_img;//所有图片元数据
+    std::vector<Entry_Text> history_text;//所有文本数据
+    std::vector<Entry_Img> history_img;//所有图片元数据
 
 
 

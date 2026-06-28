@@ -57,6 +57,6 @@ int main()
         i3+=3;
         sleep(1);
      }
-    
+    printf("主函数结束\n");
     log.StopServer();
 }

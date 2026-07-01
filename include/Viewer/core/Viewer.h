@@ -35,8 +35,9 @@ struct LogEntry
 {
     uint8_t type;
     uint64_t timestamp;
+    uint8_t level;
     std::string category;
-    std::string data;//文本或图片二进制数据 长度不定因此用string
+    //std::string data;//文本或图片二进制数据 长度不定因此用string
     uint64_t index;
 };
 
@@ -62,14 +63,10 @@ public:
     Viewer(const std::string ServerIP, const uint16_t ServerPort);
     ~Viewer();
     bool StopConnect();
-
     void StartThread();
-    bool Hear();
 
-    void ShowAll();
-    void Show_A_Log();
-    void IndexShift_L();
-    void IndexShift_R();
+
+
 
 //utils 
 private:
@@ -81,8 +78,19 @@ private:
     void system_clear();
 
 private:
+    bool Hear();
+    void Show_A_Log();
+    void ShowAll();
+    void IndexShift_L();
+    void IndexShift_R();
+
+
+    void LogTextPrinter(const uint64_t& timestamp, const uint8_t& level, const std::string& tag, const std::string text);
+
+private:
 
     int server_fd;
+    bool connected = false;
 
     std::set<std::string> categories;//当前筛选分类 ""=全部
     std::vector<std::string> all_categories;
@@ -90,6 +98,7 @@ private:
 
     std::vector<LogEntry> history;//所有元数据信息 扩容时旧迭代器失效
     size_t index_history = 0;
+    
     
     std::vector<Entry_Text> history_text;//所有文本数据
     std::vector<Entry_Img> history_img;//所有图片元数据
@@ -107,6 +116,8 @@ private:
     std::thread input_thread;
     bool input_running = true;
     bool show_pause = false;
+    bool changed_category = false;
+    bool reseted = false;
     void InputLoop();
     
     //消息播放线程

@@ -22,9 +22,11 @@
 
 
 //发送协议 暂定
-//[数据类型][时间戳][分类长度][分类名][数据长度][原始数据]
-//    1B      8B       1B      ..      4B       ...
+//[数据类型][时间戳][日志级别][分类长度][分类名][数据长度][原始数据]
+//    1B      8B       1B        1B      ..      4B       ...
 //服务端发送原始微秒级时间戳
+//日志级别 1 2 3 : error(red) warning(yellow) info(white)
+
 //客户端解算
 
 
@@ -34,6 +36,13 @@ enum class LogType : uint8_t
 {
     TEXT_UTF8 = 0x01,
     IMAGE_RAW = 0x02,
+};
+
+enum class LogLevel : uint8_t
+{
+    ERROR = 0x01,
+    WARNING = 0x02,
+    INFO = 0x03,
 };
 
 struct LogStreamEntry
@@ -81,9 +90,11 @@ private:
 
 
     std::string current_category = "Default";
+    LogLevel current_level = LogLevel::INFO;
 
-    bool send_Text(const std::string& tag, const std::string& str);
-    bool send_Img(const std::string& tag, const cv::Mat& mat);
+
+    bool send_Text(const LogLevel& level, const std::string& tag, const std::string& str);
+    bool send_Img(const LogLevel& level, const std::string& tag, const cv::Mat& mat);
     
 
 private:
@@ -91,6 +102,7 @@ private:
     struct TaggedStream
     {
         LogPrinter& log;
+        LogLevel level;
         std::string tag;
         LogStreamEntry msg;
         
@@ -108,7 +120,9 @@ private:
 
 
 public:
+    //此operator是LogPrinter的
     TaggedStream operator()(const std::string& tag);
+    TaggedStream operator()(const std::string& tag, const LogLevel& level);
 
 
 };

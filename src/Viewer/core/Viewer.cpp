@@ -1,4 +1,15 @@
 #include "Viewer/core/Viewer.h"
+
+
+#define COLOR_RED     "\033[31m"
+#define COLOR_YELLOW  "\033[33m"
+#define COLOR_WHITE   "\033[37m"
+#define COLOR_RESET   "\033[0m"
+
+
+
+
+
 // 辅助函数：循环读取直到读满 n 字节
 
 Viewer::Viewer(const std::string ServerIP, const uint16_t ServerPort)
@@ -13,9 +24,11 @@ Viewer::Viewer(const std::string ServerIP, const uint16_t ServerPort)
     if(connect(this->server_fd, (struct sockaddr*)&addr, sizeof(addr)) == -1)
     {
         printf("连接失败,请检查IP和端口\n");
+        this->connected = false;
         return;
     }
     printf("连接成功\n");
+    this->connected = true;
 
 
     //set容器初始化
@@ -35,12 +48,14 @@ Viewer::~Viewer()
     // this->display_running = false;
     // this->display_thread.join();
     close(this->server_fd);
+    this->connected = false;
 }
 
 
 bool Viewer::StopConnect()
 {
     close(this->server_fd);
+    this->connected = false;
     return true;
 }
 
@@ -48,10 +63,11 @@ bool Viewer::StopConnect()
 
 bool Viewer::Hear()
 {
-    //协议:[数据类型][时间戳][分类长度][分类名][数据长度][原始数据]
+    //协议:[数据类型][时间戳][日志级别][分类长度][分类名][数据长度][原始数据]
     //按元消息格式解算
     uint8_t type;
     uint64_t timestamp;
+    uint8_t level;
     uint8_t category_len;
     uint32_t data_len;
 
@@ -59,6 +75,8 @@ bool Viewer::Hear()
 
     if (recv_all(this->server_fd, &timestamp, 8) <= 0) return false;
     timestamp = ntohl_64(timestamp);
+
+    if(recv_all(this->server_fd, &level, 1) <= 0) return false;
 
     if (recv_all(this->server_fd, &category_len, 1) <= 0) return false;
     std::string category(category_len, '\0');
@@ -86,8 +104,9 @@ bool Viewer::Hear()
     {
         type,
         timestamp,
+        level,
         category,
-        data,
+        //data,
         index,
     };
     this->history.push_back(msg);
@@ -109,6 +128,11 @@ bool Viewer::Hear()
 
 void Viewer::StartThread()
 {
+    if(!this->connected)
+    {
+        printf("未连接到服务端,已退出");
+        return;
+    }
     //关于多线程 std::thread(&有参普通函数,参数)或std::thread(&无参普通函数)
     //对于普通函数 会隐式转化为函数指针 故而可以省略&s
     //如果是类中的方法 一定要&同时传入这个对象 如 类A x 则 std::thread(&A::函数,&x)
@@ -162,6 +186,17 @@ void Viewer::DisplayLoop()
     system_clear();
     while(this->display_running)
     {
+        if(this->reseted)
+        {
+            system_clear();
+            this->reseted = false;
+        }
+        if(this->changed_category)
+        {
+            system_clear();
+            this->changed_category = false;
+        }
+
         static uint64_t first_time = this->TimeCounter_ms();
 
         std::this_thread::sleep_for(std::chrono::milliseconds(2));
@@ -246,7 +281,7 @@ void Viewer::Show_A_Log()
     switch(now_msg.type)
     {
         case 0x01:
-        printf("[%s][%s]%s\n",timestamp_decoder(now_msg.timestamp).c_str(),now_msg.category.c_str(),this->history_text[now_msg.index].text.c_str());
+        LogTextPrinter(now_msg.timestamp,now_msg.level,now_msg.category,this->history_text[now_msg.index].text);
         break;
 
         case 0x02:
@@ -257,14 +292,43 @@ void Viewer::Show_A_Log()
     
 }
 
+void Viewer::LogTextPrinter(const uint64_t& timestamp, const uint8_t& level, const std::string& tag, const std::string text)
+{
+    std::string time;
+    std::string loglevel;
+    std::string color;
+    std::string color_reset = COLOR_RESET;
+    switch(level)
+    {
+        case 1:
+            loglevel = "[Error]  ";
+            color = COLOR_RED;
+            break;
+        case 2:
+            loglevel = "[Warning]";
+            color = COLOR_YELLOW;
+            break;
+        case 3:
+            loglevel = "[Info]   ";
+            color = COLOR_WHITE;
+            break;
+    }
+    time = timestamp_decoder(timestamp);
+    
+    printf("%s", color.c_str());
 
+    printf("%s  [%s:][%s]%s",loglevel.c_str(),time.c_str(),tag.c_str(),text.c_str());
 
+    printf("%s\n",color_reset.c_str());
+
+}
 
 void Viewer::IndexShift_L()
 {
     int v = this->all_categories.size();
     this->index_category = (this->index_category + v -1) % v;
-    system_clear();
+    //system_clear();
+    this->changed_category = true;
     this->index_history = 0;
     this->show_pause = false;
 }
@@ -273,14 +337,16 @@ void Viewer::IndexShift_R()
 {
     int v = this->all_categories.size();
     this->index_category = (this->index_category + v +1) % v;
-    system_clear();
+    //system_clear();
+    this->changed_category = true;
     this->index_history = 0;
     this->show_pause = false;
 }
 
 void Viewer::Display_Reset()
 {
-    system_clear();
+    //system_clear();
+    this->reseted = true;
     this->index_history = 0;
     this->show_pause = false;
 }

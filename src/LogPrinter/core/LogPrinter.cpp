@@ -65,7 +65,7 @@ bool LogPrinter::StopServer()
 
 
 
-bool LogPrinter::send_Text(const std::string& tag, const std::string& str)
+bool LogPrinter::send_Text(const LogLevel& level, const std::string& tag, const std::string& str)
 {
     if(!this->send_running)
     {
@@ -77,6 +77,8 @@ bool LogPrinter::send_Text(const std::string& tag, const std::string& str)
     uint64_t timestamp = LogPrinter::htonl_64(LogPrinter::TimeCounter());
     //转换为1字节读入buf
     uint8_t* p_timestamp = reinterpret_cast<uint8_t*>(&timestamp);
+    //日志级别
+    uint8_t loglevel = static_cast<uint8_t>(level);
     //分类长度
     uint8_t category_len = tag.size();
     //数据长度
@@ -96,8 +98,10 @@ bool LogPrinter::send_Text(const std::string& tag, const std::string& str)
     std::vector<uint8_t> buf;
     buf.push_back(type);
     buf.insert(buf.end(), p_timestamp, p_timestamp + 8);
+    buf.push_back(loglevel);
     buf.push_back(category_len);
     buf.insert(buf.end(), tag.begin(), tag.end());
+
     buf.insert(buf.end(), p_data_len, p_data_len + 4);//左闭右开
     buf.insert(buf.end(), str.begin(), str.end());
     
@@ -114,7 +118,7 @@ bool LogPrinter::send_Text(const std::string& tag, const std::string& str)
 
 
 //图片发送的重载
-bool LogPrinter::send_Img(const std::string& tag,const cv::Mat& mat)
+bool LogPrinter::send_Img(const LogLevel& level, const std::string& tag,const cv::Mat& mat)
 {
 
     if(!this->send_running)
@@ -128,6 +132,10 @@ bool LogPrinter::send_Img(const std::string& tag,const cv::Mat& mat)
     uint8_t type = static_cast<uint8_t>(LogType::IMAGE_RAW);
 
     uint64_t timestamp = LogPrinter::htonl_64(LogPrinter::TimeCounter());
+
+    //日志级别
+    uint8_t loglevel = static_cast<uint8_t>(level);
+
     uint8_t* p_timestamp = reinterpret_cast<uint8_t*>(&timestamp);
 
     uint8_t category_len = tag.size();
@@ -147,8 +155,11 @@ bool LogPrinter::send_Img(const std::string& tag,const cv::Mat& mat)
     std::vector<uint8_t> buf;
     buf.push_back(type);
     buf.insert(buf.end(), p_timestamp, p_timestamp + 8);
+    buf.push_back(loglevel);
     buf.push_back(category_len);
     buf.insert(buf.end(), tag.begin(), tag.end());
+
+
     buf.insert(buf.end(), p_data_len, p_data_len + 4);
     buf.insert(buf.end(), p_rows, p_rows + 4);
     buf.insert(buf.end(), p_cols, p_cols + 4);
@@ -167,13 +178,13 @@ bool LogPrinter::send_Img(const std::string& tag,const cv::Mat& mat)
 
 LogPrinter& LogPrinter::operator<<(const std::string& str)
 {
-    this->send_Text(this->current_category, str);
+    this->send_Text(this->current_level, this->current_category, str);
     return *this;
 }
 
 LogPrinter& LogPrinter::operator<<(const cv::Mat& mat)
 {
-    this->send_Img(this->current_category, mat);
+    this->send_Img(this->current_level, this->current_category, mat);
     return *this;
 }
 
@@ -238,7 +249,12 @@ uint64_t LogPrinter::htonl_64(uint64_t val)
 //TaggedStream结构体
 LogPrinter::TaggedStream LogPrinter::operator()(const std::string& tag)
 {
-    return TaggedStream{*this, tag, LogStreamEntry{}};
+    return TaggedStream{*this, LogLevel::INFO, tag, LogStreamEntry{}};
+}
+
+LogPrinter::TaggedStream LogPrinter::operator()(const std::string& tag, const LogLevel& level)
+{
+    return TaggedStream{*this, level, tag, LogStreamEntry{}};
 }
 
 LogPrinter::TaggedStream::~TaggedStream()
@@ -250,14 +266,14 @@ LogPrinter::TaggedStream::~TaggedStream()
         {
             buffer += it;
         }
-        this->log.send_Text(this->tag, buffer);
+        this->log.send_Text(this->level, this->tag, buffer);
     }
     
     if(!this->msg.buf_img.empty())
     {
         for(auto& it : this->msg.buf_img)
         {
-            this->log.send_Img(this->tag, it);
+            this->log.send_Img(this->level, this->tag, it);
         }
 
     }

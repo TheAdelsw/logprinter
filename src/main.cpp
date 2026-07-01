@@ -27,23 +27,23 @@ int main()
     // log<<"测试成功";
     // log.SetMsgType("图类");
     // log<<"图片发送完成";
-    log("哈哈哈")<<"测试成功"<<x;
+    log("哈哈哈", LogLevel::ERROR)<<"测试成功"<<x;
 
     // log("图类")<<"图片发送完成";
-    log("default")<<"all";
+    log("default", LogLevel::WARNING)<<"all";
     
     // log<<img1;
     // log<<img2;
 
-    log("图类")<<img1;
-    log("图类")<<img2;
-    log("图类")<<img3;
-    log("图类")<<img4;
-    log("图类")<<img5;
-    log("图类")<<img6;
-    log("图类")<<img7;
-    log("图类")<<img8;
-    log("图类")<<img9;
+    log("图类",LogLevel::ERROR)<<img1;
+    log("图类",LogLevel::ERROR)<<img2;
+    log("图类",LogLevel::ERROR)<<img3;
+    log("图类",LogLevel::ERROR)<<img4;
+    log("图类",LogLevel::ERROR)<<img5;
+    log("图类",LogLevel::ERROR)<<img6;
+    log("图类",LogLevel::ERROR)<<img7;
+    log("图类",LogLevel::ERROR)<<img8;
+    log("图类",LogLevel::ERROR)<<img9;
     
     int i1 = 1;
     int i2 = 1;
@@ -53,11 +53,11 @@ int main()
     {
         //log<<"测试:"<<i<<"\n";
         //log.SetMsgType("哈哈哈");
-        log("哈哈哈")<<"此时为:"<<i1;
+        log("哈哈哈",LogLevel::INFO)<<"此时为:"<<i1;
         //log.SetMsgType("图类");
-        log("图类")<<"此时为..."<<i2;
+        log("图类",LogLevel::ERROR)<<"此时为..."<<i2;
         //log.SetMsgType("异类");
-        log("异类")<<"Now:"<<i3;
+        log("异类",LogLevel::WARNING)<<"Now:"<<i3;
         //log<<img;
         i1+=1;
         i2+=2;
